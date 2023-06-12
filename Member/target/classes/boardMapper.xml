@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.dao.BoardMapper">
+
+	<insert id="insertBoard" parameterType="board">
+		<selectKey keyProperty="board_id" resultType="int" order="BEFORE">
+			select seq_board.nextval from dual
+		</selectKey>
+		insert into tb_board (
+			board_id,
+			title,
+			content,
+			member_id)
+		values (
+			#{board_id},
+			#{title},
+			#{content},
+			#{member_id}
+		)
+	</insert>
+
+	<select id="readBoard" parameterType="int" resultType="map">
+	SELECT 
+			b.board_id, 
+			b.title, 
+			b.content, 
+			m.member_id, 
+			m.NAME 
+		FROM 
+			TB_BOARD b, 
+			tb_member m
+		WHERE 
+			b.MEMBER_ID = m.MEMBER_ID 
+			and board_id = #{board_id}	
+	</select>
+
+	<resultMap id="boardMap" type="board">
+		<id property="board_id" column="board_id" />
+		<association property="member" column="member_id" javaType="member" select="selectMemberById"></association>
+	</resultMap>
+
+	<resultMap id="memberMap" type="member">
+		<id property="member_id" column="member_id" />
+		<result property="name" column="member_name" />
+	</resultMap>
+
+
+	<select id="selectMemberById" parameterType="string" resultMap="memberMap">
+		select
+			member_id,
+			member_name as name,
+			birth,
+			gender,
+			email,
+			phone
+		from
+			tb_member
+		where
+			member_id = #{member_id}
+		</select>
+
+	<select id="readBoardMap" parameterType="int" resultMap="boardMap">
+		select * from tb_board where board_id = #{board_id}
+	</select>
+
+	<update id="updateBoard" parameterType="board">
+		update tb_board
+		<!-- <set> 는 앞에 오면 지워버린다. -->
+		<set>
+			<if test="title != null">
+				title = #{title},
+			</if>
+			<if test="content != null">
+				content = #{content},
+			</if>
+			update_date = sysdate
+		</set>
+		where board_id = #{board_id}
+	</update>
+
+
+	<delete id="deleteBoardById" parameterType="int">
+		delete from tb_board where board_id = #{board_id}
+	</delete>
+
+
+	<select id="searchBoard" parameterType="board" resultType="board">
+		select
+			*
+		from
+			tb_board
+		<where>
+			<choose>
+				<when test="title != null">
+					and title like '%' || #{title} || '%'
+				</when>
+				<when test="content != null">
+					and content like '%' || #{content} || '%'
+				</when>
+				<otherwise>
+					and hit > 0
+				</otherwise>
+			</choose>
+		</where>
+	</select>
+
+	<select id="searchBoardIn" parameterType="int" resultType="board">
+		<!-- 
+		collection : 전달받은 인자, List or Array 형태만 가능
+		item : 전달받은 인자 값을 alias 명으로 대체할 때 사용
+		open : 구문이 시작될 대 삽입할 문자열
+		close : 구문이 종료될 때 삽입할 문자열
+		separator : 반복되는 구문 사이에 출력할 문자열
+		-->
+		select
+		*
+		from
+			tb_board
+		where
+			board_id in
+		<foreach collection="list" item="board_id" open="(" close=")" separator=",">
+				#{board_id}
+		</foreach>
+
+	</select>
+
+</mapper>
